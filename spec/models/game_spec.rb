@@ -131,4 +131,34 @@ RSpec.describe Game, type: :model do
       expect(game_w_questions.status).to eq(:money)
     end
   end
+
+  context 'answer to the current question' do
+    it 'right answer' do
+      level = game_w_questions.current_level
+      expect(game_w_questions.answer_current_question!('d')).to be_truthy
+      game_w_questions.reload
+      expect(game_w_questions.status).to eq(:in_progress)
+      expect(game_w_questions.current_level).to eq(level + 1)
+    end
+
+    it 'wrong answer' do
+      expect(game_w_questions.answer_current_question!('a')).to be_falsey
+      expect(game_w_questions.status).to eq(:fail)
+    end
+
+    it 'question in a million' do
+      game_w_questions.current_level = Question::QUESTION_LEVELS.max
+      game_w_questions.answer_current_question!('d')
+      game_w_questions.reload
+      expect(game_w_questions.status).to eq(:won)
+      expect(game_w_questions.prize).to be > 0
+    end
+
+    it 'answer in timeout' do
+      game_w_questions.finished_at = Time.now
+      game_w_questions.created_at = 1.hour.ago
+      expect(game_w_questions.answer_current_question!('d')).to be_falsey
+      expect(game_w_questions.status).to eq(:timeout)
+    end
+  end
 end
